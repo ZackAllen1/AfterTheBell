@@ -12,7 +12,7 @@ The team leader should add each of their members to the repository using their u
 
 This can be done at the following location
 
-![zero page](githubhelp0.PNG)
+![zero page](./imgs/githubhelp0.PNG)
 
 Then, all members should follow the instructions to [install GitHub Desktop on your computer](https://docs.github.com/en/desktop/installing-and-configuring-github-desktop/overview/getting-started-with-github-desktop)
 
@@ -29,19 +29,19 @@ You should now be able to see all of the files in the folder you specified as th
 
 ## What are Changes and Commits
 
-![first page](githubhelp1.png)
+![first page](./imgs/githubhelp1.png)
 
 ## What is a Branch
 
-![second page](githubhelp2.png)
+![second page](./imgs/githubhelp2.png)
 
 A helpful sample diagram of branches working together
 
-![helpful diagram](githubhelp_branch_diagram.png)
+![helpful diagram](./imgs/githubhelp_branch_diagram.png)
 
 ## How to Upload/Download (Push/Pull) to and from the Cloud 
 
-![third page](githubhelp3.png)
+![third page](./imgs/githubhelp3.png)
 
 
 
