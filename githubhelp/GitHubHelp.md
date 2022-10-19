@@ -1,10 +1,10 @@
-# STA3180 Github Help
+# STA3180 GitHub Help
 
-Summary: Github allows us to upload, edit, and manage code from a single online webpage.
+Summary: GitHub allows us to upload, edit, and manage code as a team from a single online webpage.
 
-## Instalation
+## Installation
 
-To begin using Github, you first need to make an account with a username (you can set up the Student Edition later).
+To begin using GitHub, you first need to make an account with a username (you can set up the Student Edition later).
 
 If you are the team leader you should create a "repository" for your teams' code to be stored ([create a repo help](https://docs.github.com/en/get-started/quickstart/create-a-repo))
 
@@ -23,7 +23,9 @@ how you can make changes, commit those changes, then upload the commit to the Gi
 
 Follow the steps [here](https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/adding-and-cloning-repositories/cloning-and-forking-repositories-from-github-desktop) to connect ("clone") our repo to your local machine.
 
-You do not need to work about the "Forking the Repository" steps
+You do not need to work about the "Forking the Repository" steps.
+
+You should now be able to see all of the files in the folder you specified as the "Local Path" on your computer.
 
 ## What are Changes and Commits
 
