@@ -3,7 +3,7 @@ American Statistics Association "After The Bell" Fall Data Challenge
 
 
 Team Roles:  
-Write-up Report (2 ppl)  
+Write-up Report  
 Presentation  
 Data Cleaning  
 Exploratory Data Analysis and Visuals  
