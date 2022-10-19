@@ -23,7 +23,7 @@ how you can make changes, commit those changes, then upload the commit to the Gi
 
 Follow the steps [here](https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/adding-and-cloning-repositories/cloning-and-forking-repositories-from-github-desktop) to connect ("clone") our repo to your local machine.
 
-You do not need to work about the "Forking the Repository" steps.
+You do not need to worry about the "Forking the Repository" steps.
 
 You should now be able to see all of the files in the folder you specified as the "Local Path" on your computer.
 
