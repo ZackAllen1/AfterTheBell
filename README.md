@@ -29,5 +29,5 @@ STA3180 Group Project based on American Statistics Association "After The Bell" 
   * Status: Not Submitted
 * Consortium for the Advancement of Undergraduate Statistics Education (CAUSE) Undergraduate Statistics Class Project Competition (USCLAP), Intermediate Level
   * Deadline: December 23rd, 2022
-  * Status: Will Submit
+  * Status: Submitted, Waiting for Results
   * Results: TBD
