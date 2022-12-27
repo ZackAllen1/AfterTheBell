@@ -1,0 +1,466 @@
+---
+title: "AfterTheBell Final"
+author: "By: Zachary, Luke, Anthony, and Finn"
+date: "2022-12-23"
+output: html_document:
+  fig_crop: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(VGAM)
+library(ggplot2)
+library(plyr)
+library(gridExtra)
+library(patchwork)
+library(MASS)
+library(plotly)
+library(corrplot)
+library(RColorBrewer)
+```
+
+## Load Data
+
+```{r}
+# load full data
+pfi = read.csv("../data/2019_csv_data.csv")
+head(pfi)
+```
+
+## Exploratory Data Analysis
+
+```{r}
+# identifiers
+uniqueID = pfi[, "BASMID"]
+gradelevel = c("ALLGRADEX")
+
+# potential response variables
+grades = c("SEGRADES")
+studentSatis = c("SEENJOY")
+
+# parent involvement type <-> predictor questions
+paren = c("SEFUTUREX", "SCCHOICE")
+comm = c("FSATCNFN", "FSCOUNSLR", "FSMTNG")
+volun = c("FSVOL", "FSFUNDRS")
+#lah = c("FHCHECKX", "FHHELP")
+dm = c("FSPTMTNG", "FSCOMMTE")
+collab = c("FSSPORTX", "FOCRAFTS", "FOGAMES", "FOBUILDX","FOSPORT", "FOLIBRAYX", "FOBOOKSTX")
+
+location = c("CENREG", "ZIPLOCL", "TTLHHINC")
+
+
+selectedCols = c(gradelevel, studentSatis, grades,
+                  paren, comm, volun, dm, collab, location)
+subset = pfi[, selectedCols]
+```
+
+```{r}
+# categorize grade level to (elem = "1", middle = "2", high="3")
+subset$ALLGRADEX = ifelse(subset$ALLGRADEX <= 8, yes = 1,
+                          no = ifelse(subset$ALLGRADEX <= 11, yes = 2, no = 3))
+
+# categorize future education level (get a college degree = 2, no college degree = 1)
+subset$SEFUTUREX = ifelse(subset$SEFUTUREX >= 5, yes = 2, no = 1)
+
+# categorize household income (Low = 1, Middle = 2, High = 3)
+subset$TTLHHINC = ifelse(subset$TTLHHINC <= 4, yes = 1,
+                         no = ifelse(subset$TTLHHINC <= 8, yes = 2, no = 3))
+```
+
+```{r}
+# drop any row with -1 as value
+removedrows = subset[rowSums(subset == -1)==0, , drop = FALSE]
+
+# remove row if SEGRADES == 5
+removedrows = removedrows[removedrows$SEGRADES != 5,]
+
+removedrows
+```
+
+## Plots
+
+```{r}
+# red = less than we would expect
+# blue = more than we would expect
+# p-value < 2.2e-16
+t_grades_gl = table(removedrows$SEGRADES, removedrows$ALLGRADEX)
+colnames(t_grades_gl) = c("Elem", "Middle", "High")
+rownames(t_grades_gl) = c("Mostly A's", "Mostly B's", "Mostly C's", "Mostly D's or Lower")
+corrplot(chisq.test(t_grades_gl)$residuals, is.cor = FALSE, tl.col="black", tl.srt = 45)
+```
+
+```{r}
+# Percent of Students that get Mostly C's/D's at each grade level
+sum(t_grades_gl[c(3,4),1]) / sum(t_grades_gl[,1]) * 100
+sum(t_grades_gl[c(3,4),2]) / sum(t_grades_gl[,2]) * 100
+sum(t_grades_gl[c(3,4),3]) / sum(t_grades_gl[,3]) * 100
+```
+
+```{r}
+# red = less than we would expect under independence
+# blue = more than we would expect under independence
+# p-value < 2.2e-16
+t_enjoy_gl = table(removedrows$SEENJOY, removedrows$ALLGRADEX)
+colnames(t_enjoy_gl) = c("Elem", "Middle", "High")
+rownames(t_enjoy_gl) = c("Strongly Enjoys", "Enjoys", "Does Not Enjoy", "Strongly Does Not Enjoy")
+corrplot(chisq.test(t_enjoy_gl)$residuals, is.cor = FALSE, tl.col="black")
+```
+
+```{r}
+# Percent of Students that Do Not Enjoy or Strongly Do Not Enjoy School at each grade level
+sum(t_enjoy_gl[c(3,4),1]) / sum(t_enjoy_gl[,1]) * 100
+sum(t_enjoy_gl[c(3,4),2]) / sum(t_enjoy_gl[,2]) * 100
+sum(t_enjoy_gl[c(3,4),3]) / sum(t_enjoy_gl[,3]) * 100
+```
+
+```{r}
+# chi-squared residuals comparing student enjoyment to reported grades
+t_grades_enjoy = table(removedrows$SEENJOY, removedrows$SEGRADES)
+colnames(t_grades_enjoy) = c("Mostly A's", "Mostly B's", "Mostly C's", "D's or Lower")
+rownames(t_grades_enjoy) = c("Strongly Enjoys", "Enjoys", "Does Not Enjoy", "Strongly Does Not Enjoy")
+corrplot(chisq.test(t_grades_enjoy)$residuals, is.cor = FALSE, tl.col="black")
+```
+
+## Divide Datasets
+
+```{r}
+# split into 4 sub-datasets (elem, middle, high, all)
+xcols = 4:22
+ycol = 3
+
+elementaryX = removedrows[which(removedrows$ALLGRADEX == 1), xcols]
+elementaryY = removedrows[which(removedrows$ALLGRADEX == 1), ycol]
+
+middleX = removedrows[which(removedrows$ALLGRADEX == 2), xcols]
+middleY = removedrows[which(removedrows$ALLGRADEX == 2), ycol]
+
+highX = removedrows[which(removedrows$ALLGRADEX == 3), xcols]
+highY = removedrows[which(removedrows$ALLGRADEX == 3), ycol]
+
+alldataX = removedrows[, xcols]
+alldataY = removedrows[, ycol]
+```
+
+```{r}
+binaryEncode = function(x){
+  x = x - 1
+}
+```
+
+```{r}
+# binary encode X data
+elementaryX = as.data.frame(lapply(elementaryX, binaryEncode))
+middleX = as.data.frame(lapply(middleX, binaryEncode))
+highX = as.data.frame(lapply(highX, binaryEncode))
+alldataX = as.data.frame(lapply(alldataX, binaryEncode))
+
+elementaryX
+```
+
+```{r}
+# create sum variables
+elementaryX$parenSum = rowSums(elementaryX[,paren])
+elementaryX$commSum = rowSums(elementaryX[,comm]) 
+elementaryX$volSum = rowSums(elementaryX[,volun])
+elementaryX$dmSum = rowSums(elementaryX[,dm])
+elementaryX$collabSum = rowSums(elementaryX[,collab])
+
+middleX$parenSum = rowSums(middleX[,paren])
+middleX$commSum = rowSums(middleX[,comm]) 
+middleX$volSum = rowSums(middleX[,volun]) 
+middleX$dmSum = rowSums(middleX[,dm]) 
+middleX$collabSum = rowSums(middleX[,collab]) 
+
+highX$parenSum = rowSums(highX[,paren])
+highX$commSum = rowSums(highX[,comm]) 
+highX$volSum = rowSums(highX[,volun]) 
+highX$dmSum = rowSums(highX[,dm]) 
+highX$collabSum = rowSums(highX[,collab]) 
+
+
+alldataX$parenSum = rowSums(alldataX[,paren])
+alldataX$commSum = rowSums(alldataX[,comm]) 
+alldataX$volSum = rowSums(alldataX[,volun])
+alldataX$dmSum = rowSums(alldataX[,dm])
+alldataX$collabSum = rowSums(alldataX[,collab])
+
+elementaryX[, 20:24]
+```
+
+## Plots after Splitting Data
+
+```{r}
+# frequency of response variable (SEGRADES) at each school level
+par(mfrow=c(1,3))
+yt1 = as.data.frame(table(elementaryY))
+ybp1 = barplot(yt1$Freq / sum(yt1$Freq), main = "Y Response Freq (Elem)", ylim = c(0,1))
+
+yt2 = as.data.frame(table(middleY))
+ybp2 = barplot(yt2$Freq / sum(yt2$Freq), main = "Y Response Freq (Middle)", ylim = c(0,1))
+
+yt3 = as.data.frame(table(highY))
+ybp3 = barplot(yt3$Freq / sum(yt3$Freq), main = "Y Response Freq (Middle)", ylim = c(0,1))
+```
+
+```{r}
+# barplot of student count at each grade level (before removals)
+gradeDist1 = data.frame(gradeLevel = c("Elementary", "Middle", "High"),
+                       nStudents = c(sum(subset$ALLGRADEX == 1), sum(subset$ALLGRADEX == 2), sum(subset$ALLGRADEX == 3)))
+
+bp1 = barplot(gradeDist1$nStudents, names.arg = gradeDist1$gradeLevel,
+       main = "Number of Students per School Type (Before Cleaning)", ylim = c(0,7000))
+text(x = bp1, y = gradeDist1$nStudents, label = gradeDist1$nStudents, pos = 3, cex = 1, col = "black")
+```
+
+```{r}
+# barplot of student count at each grade level (after removals)
+gradeDist2 = data.frame(gradeLevel = c("Elementary", "Middle", "High"),
+                       nStudents = c(length(elementaryY), length(middleY), length(highY)))
+
+bp2 = barplot(gradeDist2$nStudents, names.arg = gradeDist2$gradeLevel,
+       main = "Number of Students per School Type (After Cleaning)", ylim = c(0,7000))
+
+text(x = bp2, y = gradeDist2$nStudents, label = gradeDist2$nStudents, pos = 3, cex = 1, col = "black")
+```
+
+
+```{r}
+corrplot(cor(elementaryX[, c("parenSum", "commSum", "volSum", "dmSum", "collabSum")]), method="square",
+           tl.col="black", tl.srt=45, type="lower", addCoef.col = "black")
+```
+
+```{r}
+corrplot(cor(middleX[, c("parenSum", "commSum", "volSum", "dmSum", "collabSum")]), method="square",
+           tl.col="black", tl.srt=45, type="lower", addCoef.col = "black")
+```
+
+```{r}
+corrplot(cor(highX[, c("parenSum", "commSum", "volSum", "dmSum", "collabSum")]), method="square",
+           tl.col="black", tl.srt=45, type="lower", addCoef.col = "black")
+```
+
+```{r}
+corrplot(cor(alldataX[, c("parenSum", "commSum", "volSum", "dmSum", "collabSum")]), method="square",
+           tl.col="black", tl.srt=45, type="lower", addCoef.col = "black")
+```
+
+```{r, fig.width=12, echo=FALSE}
+# stacked bar plots of sum-variable by school level and reported grades
+sumvars = list("parenSum", "commSum", "volSum", "dmSum", "collabSum")
+legendLabels = c("Mostly A's", "Mostly B's", "Mostly C's", "Mostly D's or Lower")
+names(legendLabels) = c(1,2,3,4)
+for(s in sumvars){
+  
+  t1 = as.data.frame(table(elementaryX[,s], elementaryY) / length(elementaryY))
+  t1$Response = mapvalues(t1$elementaryY,
+                    from = c(1,2,3,4),
+                    to = legendLabels)
+  p1 = ggplot(t1, aes(fill=Response, y=Freq, x=Var1)) +  
+    ggtitle(paste(s, "Elem by SEGRADE")) +xlab("# of Yes Responses") +
+    geom_bar(position='stack', stat='identity')  + ylim(0,1)
+  
+  t2 = as.data.frame(table(middleX[,s], middleY) / length(middleY))
+  t2$Response = mapvalues(t2$middleY,
+                    from = c(1,2,3,4),
+                    to = legendLabels)
+  p2 = ggplot(t2, aes(fill=Response, y=Freq, x=Var1)) +
+    ggtitle(paste(s, "Middle by SEGRADE")) + xlab("# of Yes Responses") +
+    geom_bar(position='stack', stat='identity') + ylim(0,1) 
+  
+  t3 = as.data.frame(table(highX[,s], highY) / length(highY))
+  t3$Response = mapvalues(t3$highY,
+                    from = c(1,2,3,4),
+                    to = legendLabels)
+  p3 = ggplot(t3, aes(fill=Response, y=Freq, x=Var1)) +
+    ggtitle(paste(s, "High by SEGRADE")) + xlab("# of Yes Responses") +
+    geom_bar(position='stack', stat='identity') + ylim(0,1) 
+  
+  #grid.arrange(p1, p2, p3, ncol=3)
+  
+  combined <- p1 + p2 + p3 + plot_layout(guides = "collect")  & theme(legend.position = "bottom")
+  plot(combined)
+}
+```
+
+## Model Fitting
+
+```{r}
+# cumulative logit model of proportional odds
+elem.model1 = vglm(elementaryY ~  elementaryX$parenSum + elementaryX$commSum+elementaryX$volSum+elementaryX$dmSum+
+                     elementaryX$collabSum,
+                   family=cumulative(parallel=TRUE))
+summary(elem.model1)
+```
+
+```{r}
+# cumulative logit model, no proportional odds
+elem.model2 = vglm(elementaryY ~  elementaryX$parenSum + elementaryX$commSum + elementaryX$volSum + elementaryX$dmSum +
+                     elementaryX$collabSum,
+                   family=cumulative(parallel=FALSE))
+summary(elem.model2)
+```
+
+```{r}
+# test if proportional odds assumption holds
+lrtest(elem.model2, elem.model1)
+```
+
+```{r}
+elementaryYBinary = ifelse(elementaryY < 3, yes = 1, no = 0)
+elem.model3 = glm(elementaryYBinary ~ elementaryX$parenSum + elementaryX$commSum + elementaryX$volSum +
+                     elementaryX$dmSum + elementaryX$collabSum ,
+                  family = binomial(link= "logit"))
+summary(elem.model3)
+```
+
+```{r}
+middle.model1 = vglm(middleY ~  middleX$parenSum + middleX$commSum + middleX$volSum + middleX$dmSum +
+                     middleX$collabSum + middleX$TTLHHINC,
+                   family=cumulative(parallel=TRUE))
+summary(middle.model1)
+```
+
+```{r}
+middleYBinary = ifelse(middleY < 3, yes = 1, no = 0)
+middle.model2 = glm(middleYBinary ~ middleX$parenSum  + middleX$commSum + middleX$volSum +
+                     middleX$dmSum + middleX$collabSum,
+                  family = binomial(link= "logit"))
+summary(middle.model2)
+```
+
+```{r}
+high.model1 = vglm(highY ~  highX$parenSum + highX$commSum + highX$volSum + highX$dmSum +
+                     highX$collabSum + highX$TTLHHINC,
+                   family=cumulative(parallel=TRUE))
+summary(high.model1)
+```
+
+```{r}
+highYBinary = ifelse(highY < 3, yes = 1, no = 0)
+high.model2 = glm(highYBinary ~ highX$parenSum + highX$commSum + highX$volSum +
+                     highX$dmSum + highX$collabSum,
+                  family = binomial(link= "logit"))
+summary(high.model2)
+```
+
+```{r}
+# reset
+alldataX$CENREG = alldataX$CENREG  + 1 
+alldataX$ZIPLOCL = alldataX$ZIPLOCL + 1
+alldataX$TTLHHINC = alldataX$TTLHHINC + 1
+```
+
+## Geographical Analysis
+
+```{r}
+# commSum = number of yes responses to the following binary variable:
+#    ->  FSATCNFN, FSCOUNSLR, and FSMTNG
+# parenSum = number of yes responses to the following binary variables:
+#    ->  SEFUTUREX and SCCHOICE
+#
+# ZIPLOCL = zip code classification of student (City, Suburb, Town, Rural)
+# CENREG = geographical location of student (Northeast, South, Midwest, West)
+# TTLHHINC = family income in the past year (Low = 1, Middle = 2, High = 3)
+
+# use alldataX for analysis
+# Goal: find relationships between commSum, parenSum, ZIPLOCL, CENREG, and TTLHHINC
+
+# Possibly useful resources:
+# http://www.sthda.com/english/wiki/chi-square-test-of-independence-in-r
+# https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+```
+
+```{r}
+# count data
+t_zip_comm = table(alldataX$parenSum, alldataX$ZIPLOCL)
+colnames(t_zip_comm) = c("City - Large", "City - Midsize", "City - Small",
+                         "Suburb - Large", "Suburb - Midsize", "Suburb - Small",
+                         "Town - Fringe", "Town - Distant", "Town - Remote",
+                         "Rural - Fringe", "Rural - Distant", "Rural - Remote")
+t_zip_comm
+```
+
+```{r}
+chisq1 <- chisq.test(t_zip_comm)
+chisq1
+```
+
+```{r}
+# orange = less than we would expect under independence
+# purple = more than we would expect under independence
+# values approx. > |2| are significant
+par(xpd = TRUE)
+corrplot(chisq1$residuals, is.cor = FALSE, method="square", tl.col = "black", cl.ratio=1,
+          col.lim=c(-10, 10), cl.pos = 'b',  col = COL2("PuOr"), tl.srt = 45,
+         addCoef.col = "black", number.cex=0.8, mar=c(0,0,0,4))
+```
+
+```{r}
+# count data
+t_income_zip = table(alldataX$TTLHHINC, alldataX$ZIPLOCL)
+rownames(t_income_zip) = c("Low", "Middle", "High")
+colnames(t_income_zip) = c("City - Large", "City - Midsize", "City - Small",
+                         "Suburb - Large", "Suburb - Midsize", "Suburb - Small",
+                         "Town - Fringe", "Town - Distant", "Town - Remote",
+                         "Rural - Fringe", "Rural - Distant", "Rural - Remote")
+
+t_income_zip
+```
+
+```{r}
+chisq2 <- chisq.test(t_income_zip)
+chisq2
+```
+
+```{r}
+par(xpd = TRUE)
+corrplot(chisq2$residuals, is.cor = FALSE, method="square", tl.col = "black", cl.ratio=1,
+          col.lim=c(-10, 10), cl.pos = 'b', tl.cex=0.9, tl.srt = 45,
+         addCoef.col = "black", number.cex=0.8, mar=c(0,0,0,4))
+```
+
+```{r}
+# count data
+t_paren_cen = table(alldataX$parenSum, alldataX$CENREG)
+
+colnames(t_paren_cen) = c("Northeast", "South", "Midwest", "West")
+
+t_paren_cen
+```
+
+```{r}
+chisq3 <- chisq.test(t_paren_cen)
+chisq3
+```
+
+```{r}
+par(xpd = TRUE)
+corrplot(chisq3$residuals, is.cor = FALSE, method="square", tl.col = "black", cl.ratio=.5,
+          col.lim=c(-10, 10), cl.pos = 'b', col = COL2("PuOr"), tl.srt =45,
+         addCoef.col = "black", number.cex=0.8)
+```
+
+```{r}
+# count data
+t_cen_zip = table(alldataX$CENREG, alldataX$ZIPLOCL)
+
+rownames(t_cen_zip) = c("Northeast", "South", "Midwest", "West")
+colnames(t_cen_zip) = c("City - Large", "City - Midsize", "City - Small",
+                         "Suburb - Large", "Suburb - Midsize", "Suburb - Small",
+                         "Town - Fringe", "Town - Distant", "Town - Remote",
+                         "Rural - Fringe", "Rural - Distant", "Rural - Remote")
+
+t_cen_zip
+```
+
+```{r}
+chisq4 <- chisq.test(t_cen_zip)
+chisq4
+```
+
+```{r}
+par(xpd = TRUE)
+corrplot(chisq4$residuals, is.cor = FALSE, method="square", tl.col = "black", cl.ratio=.5,
+          col.lim=c(-15, 15), cl.pos = 'b', col = COL2("PuOr"), tl.srt = 45,
+         addCoef.col = "black", number.cex=0.8, mar=c(0,0,0,4))
+```
